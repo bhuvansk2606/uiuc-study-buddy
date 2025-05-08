@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import AnimatedHashtag from '@/components/AnimatedHashtag'
+import Image from 'next/image'
 
 export default function Home() {
   return (

@@ -5,6 +5,8 @@ import { Disclosure, Menu, Transition } from '@headlessui/react'
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
 import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
+import Image from 'next/image'
+import { signIn } from 'next-auth/react'
 
 function classNames(...classes: string[]) {
   return classes.filter(Boolean).join(' ')
@@ -21,8 +23,8 @@ export default function Navbar() {
             <div className="flex h-16 justify-between">
               <div className="flex">
                 <div className="flex flex-shrink-0 items-center">
-                  <Link href="/" className="text-white text-xl font-bold">
-                    UIUC Study Buddy
+                  <Link href="/" className="text-3xl font-extrabold bg-gradient-to-r from-[#FF5F05] via-[#E84A27] to-[#D73D1C] bg-clip-text text-transparent select-none">
+                    UIUSync
                   </Link>
                 </div>
                 <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
@@ -78,12 +80,12 @@ export default function Navbar() {
                     </Transition>
                   </Menu>
                 ) : (
-                  <Link
-                    href="/auth"
+                  <button
+                    onClick={() => signIn('google')}
                     className="rounded-md bg-[#E84A27] px-3 py-2 text-sm font-medium text-white hover:bg-[#D73D1C]"
                   >
-                    Sign in
-                  </Link>
+                    Sign in with Google
+                  </button>
                 )}
               </div>
               <div className="-mr-2 flex items-center sm:hidden">
