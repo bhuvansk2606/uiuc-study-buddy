@@ -1,0 +1,237 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import CourseSearch from '@/components/CourseSearch'
+
+interface Course {
+  id: string
+  code: string
+  name: string
+  subject: string
+}
+
+interface StudyPartner {
+  name: string | null
+  netId: string
+}
+
+export default function CoursesPage() {
+  const router = useRouter()
+  const [courses, setCourses] = useState<Course[]>([])
+  const [error, setError] = useState('')
+  const [isLoading, setIsLoading] = useState(true)
+  const [studyPartners, setStudyPartners] = useState<Record<string, StudyPartner[]>>({})
+  const [showPartnersFor, setShowPartnersFor] = useState<string | null>(null)
+  const [requestStatus, setRequestStatus] = useState<Record<string, string>>({})
+  const [currentUserNetId, setCurrentUserNetId] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetchCourses()
+    fetchCurrentUser()
+  }, [])
+
+  const fetchCurrentUser = async () => {
+    try {
+      const res = await fetch('/api/auth/session')
+      if (res.ok) {
+        const data = await res.json()
+        setCurrentUserNetId(data.user?.netId || null)
+      }
+    } catch {}
+  }
+
+  const fetchCourses = async () => {
+    try {
+      const response = await fetch('/api/courses')
+      if (!response.ok) {
+        throw new Error('Failed to fetch courses')
+      }
+      const data = await response.json()
+      setCourses(data.courses)
+    } catch (error) {
+      setError('Failed to load courses')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleCourseSelect = async (course: { code: string; name: string; subject: string }) => {
+    try {
+      const response = await fetch('/api/courses', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(course),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to add course')
+      }
+
+      // Refresh the courses list
+      fetchCourses()
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to add course')
+    }
+  }
+
+  const handleRemoveCourse = async (courseId: string) => {
+    try {
+      const response = await fetch(`/api/courses/${courseId}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to remove course')
+      }
+
+      // Refresh the courses list
+      fetchCourses()
+    } catch (error) {
+      setError('Failed to remove course')
+    }
+  }
+
+  const handleFindPartners = async (courseId: string) => {
+    try {
+      const response = await fetch(`/api/courses/${courseId}/users`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch study partners')
+      }
+      const data = await response.json()
+      setStudyPartners((prev) => ({ ...prev, [courseId]: data.users }))
+      setShowPartnersFor(courseId)
+    } catch (error) {
+      setError('Failed to fetch study partners')
+    }
+  }
+
+  const handleRequest = async (courseId: string, targetNetId: string) => {
+    setRequestStatus((prev) => ({ ...prev, [targetNetId]: 'pending' }))
+    try {
+      const response = await fetch('/api/matches', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ courseId, targetNetId })
+      })
+      if (!response.ok) {
+        const data = await response.json()
+        setRequestStatus((prev) => ({ ...prev, [targetNetId]: data.error || 'error' }))
+      } else {
+        setRequestStatus((prev) => ({ ...prev, [targetNetId]: 'requested' }))
+      }
+    } catch {
+      setRequestStatus((prev) => ({ ...prev, [targetNetId]: 'error' }))
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <h2 className="text-3xl font-bold text-gray-900">Loading courses...</h2>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center">
+          <h2 className="text-3xl font-bold text-gray-900">My Courses</h2>
+          <p className="mt-2 text-sm text-gray-600">
+            Add courses to find study buddies and join course-specific chats
+          </p>
+        </div>
+
+        <div className="mt-8 max-w-xl mx-auto">
+          <CourseSearch onSelect={handleCourseSelect} error={error} />
+        </div>
+
+        <div className="mt-8">
+          <div className="bg-white shadow overflow-hidden sm:rounded-md">
+            <ul className="divide-y divide-gray-200">
+              {courses.map((course) => (
+                <li key={course.id}>
+                  <div className="px-4 py-4 sm:px-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <p className="text-sm font-medium text-[#E84A27] truncate">
+                          {course.code}
+                        </p>
+                        <p className="ml-2 text-sm text-gray-500">
+                          {course.name}
+                        </p>
+                        <p className="ml-2 text-xs text-gray-400">
+                          {course.subject}
+                        </p>
+                      </div>
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => router.push(`/chat/${course.code}`)}
+                          className="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-[#E84A27] hover:bg-[#C73E1D] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#E84A27]"
+                        >
+                          Chat
+                        </button>
+                        <button
+                          onClick={() => handleRemoveCourse(course.id)}
+                          className="inline-flex items-center px-2.5 py-1.5 border border-gray-300 text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#E84A27]"
+                        >
+                          Remove
+                        </button>
+                        <button
+                          onClick={() => handleFindPartners(course.id)}
+                          className="inline-flex items-center px-2.5 py-1.5 border border-[#E84A27] text-xs font-medium rounded text-[#E84A27] bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#E84A27]"
+                        >
+                          Find Study Partners
+                        </button>
+                      </div>
+                    </div>
+                    {showPartnersFor === course.id && studyPartners[course.id] && (
+                      <div className="mt-2 p-2 bg-gray-50 rounded border border-gray-200" style={{ maxHeight: 200, overflowY: 'auto' }}>
+                        <strong>Study Partners:</strong>
+                        <ul className="list-disc ml-5">
+                          {studyPartners[course.id].length === 0 ? (
+                            <li className="text-gray-500">No other students yet.</li>
+                          ) : (
+                            studyPartners[course.id].map((partner) => (
+                              <li key={partner.netId} className="flex items-center justify-between mb-1">
+                                <span>{partner.name || partner.netId} ({partner.netId})</span>
+                                {currentUserNetId !== partner.netId && (
+                                  <button
+                                    onClick={() => handleRequest(course.id, partner.netId)}
+                                    className="ml-2 px-2 py-1 text-xs rounded bg-[#E84A27] text-white hover:bg-[#C73E1D] focus:outline-none"
+                                    disabled={requestStatus[partner.netId] === 'requested' || requestStatus[partner.netId] === 'pending'}
+                                  >
+                                    {requestStatus[partner.netId] === 'requested'
+                                      ? 'Requested'
+                                      : requestStatus[partner.netId] === 'pending'
+                                        ? 'Requesting...'
+                                        : 'Request'}
+                                  </button>
+                                )}
+                                {requestStatus[partner.netId] && requestStatus[partner.netId] !== 'requested' && requestStatus[partner.netId] !== 'pending' && (
+                                  <span className="ml-2 text-xs text-red-500">{requestStatus[partner.netId]}</span>
+                                )}
+                              </li>
+                            ))
+                          )}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+} 

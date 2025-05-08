@@ -1,0 +1,53 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id            String    @id @default(cuid())
+  netId         String    @unique
+  name          String?
+  phoneNumber   String
+  courses       Course[]
+  matches       Match[]   @relation("UserMatches")
+  messages      Message[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Course {
+  id          String    @id @default(cuid())
+  code        String    @unique // e.g., "CS 225"
+  name        String    // e.g., "Data Structures"
+  users       User[]
+  messages    Message[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Match {
+  id        String   @id @default(cuid())
+  users     User[]   @relation("UserMatches")
+  course    String   // Course code
+  status    String   // "pending", "accepted", "rejected"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  content   String
+  course    Course   @relation(fields: [courseId], references: [id])
+  courseId  String
+  sender    User     @relation(fields: [senderId], references: [id])
+  senderId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+} 
