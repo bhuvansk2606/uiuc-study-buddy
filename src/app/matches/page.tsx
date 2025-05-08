@@ -8,7 +8,6 @@ interface Course {
   id: string
   code: string
   name: string
-  semester: string
 }
 
 interface User {
@@ -119,7 +118,6 @@ export default function MatchesPage() {
                 <div>
                   <h3 className="font-medium text-[#13294B]">{course.code}</h3>
                   <p className="text-gray-600">{course.name}</p>
-                  <p className="text-sm text-gray-500">{course.semester}</p>
                 </div>
               </div>
             ))}
@@ -133,40 +131,58 @@ export default function MatchesPage() {
           <p className="text-gray-500">No matches yet.</p>
         ) : (
           <div className="space-y-4">
-            {matches.map((match) => (
-              <div
-                key={match.id}
-                className="flex items-center justify-between p-4 border rounded-lg"
-              >
-                <div>
-                  <h3 className="font-medium text-[#13294B]">
-                    {match.course.code} - {match.course.name}
-                  </h3>
-                  <p className="text-gray-600">
-                    Study Partner: {match.user.name} ({match.user.netId})
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    Status: {match.status.charAt(0).toUpperCase() + match.status.slice(1)}
-                  </p>
-                </div>
-                {match.status === 'pending' && (
-                  <div className="space-x-2">
-                    <button
-                      onClick={() => handleMatchResponse(match.id, 'accepted')}
-                      className="bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-600 focus:ring-offset-2"
-                    >
-                      Accept
-                    </button>
-                    <button
-                      onClick={() => handleMatchResponse(match.id, 'rejected')}
-                      className="bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2"
-                    >
-                      Reject
-                    </button>
+            {(() => {
+              // Only show unique matches per user/course pair, prefer pending/accepted
+              const uniqueMap = new Map();
+              matches.forEach((match) => {
+                const key = `${match.course.id}-${match.user.netId}`;
+                if (!uniqueMap.has(key) || (uniqueMap.get(key).status !== 'pending' && match.status === 'pending') || (uniqueMap.get(key).status !== 'accepted' && match.status === 'accepted')) {
+                  uniqueMap.set(key, match);
+                }
+              });
+              return Array.from(uniqueMap.values()).map((match) => (
+                <div
+                  key={match.id}
+                  className="flex items-center justify-between p-4 border rounded-lg"
+                >
+                  <div>
+                    <h3 className="font-medium text-[#13294B]">
+                      {match.course.code} - {match.course.name}
+                    </h3>
+                    <p className="text-gray-600">
+                      Study Partner: {match.user.name} ({match.user.netId})
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      Status: {match.status.charAt(0).toUpperCase() + match.status.slice(1)}
+                    </p>
                   </div>
-                )}
-              </div>
-            ))}
+                  {match.status === 'pending' && (
+                    <div className="space-x-2">
+                      <button
+                        onClick={() => handleMatchResponse(match.id, 'accepted')}
+                        className="bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-600 focus:ring-offset-2"
+                      >
+                        Accept
+                      </button>
+                      <button
+                        onClick={() => handleMatchResponse(match.id, 'rejected')}
+                        className="bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2"
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  )}
+                  {match.status === 'accepted' && (
+                    <button
+                      onClick={() => router.push(`/dm/${match.user.netId}`)}
+                      className="bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                    >
+                      Direct Message
+                    </button>
+                  )}
+                </div>
+              ));
+            })()}
           </div>
         )}
       </div>

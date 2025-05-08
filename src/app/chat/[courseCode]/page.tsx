@@ -10,14 +10,29 @@ export default function ChatPage({ params }: { params: Promise<{ courseCode: str
   useEffect(() => {
     const fetchCourse = async () => {
       try {
+        // 1. Find in catalog (for display)
         const res = await fetch(`/api/courses/catalog`);
         if (res.ok) {
           const data = await res.json();
-          // Find by code (decoded)
           const found = data.courses.find((c: any) => c.code === decodedCode);
-          if (found) setCourse(found);
+          if (found) {
+            // 2. Fetch from backend to get the database ID
+            const dbRes = await fetch(`/api/courses?code=${encodeURIComponent(found.code)}`);
+            if (dbRes.ok) {
+              const dbData = await dbRes.json();
+              if (dbData.course) {
+                setCourse(dbData.course);
+              } else {
+                setCourse(null);
+              }
+            } else {
+              setCourse(null);
+            }
+          }
         }
-      } catch {}
+      } catch (err) {
+        setCourse(null);
+      }
     };
     fetchCourse();
   }, [decodedCode]);

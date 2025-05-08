@@ -7,7 +7,6 @@ interface Course {
   id: string
   code: string
   name: string
-  semester: string
 }
 
 export default function CourseSearchPage() {
@@ -96,7 +95,6 @@ export default function CourseSearchPage() {
                   {course.code}
                 </h3>
                 <p className="text-gray-600">{course.name}</p>
-                <p className="text-sm text-gray-500">{course.semester}</p>
               </div>
               <button
                 onClick={() => handleAddCourse(course)}

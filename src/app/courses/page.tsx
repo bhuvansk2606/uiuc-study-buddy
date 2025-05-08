@@ -25,10 +25,12 @@ export default function CoursesPage() {
   const [showPartnersFor, setShowPartnersFor] = useState<string | null>(null)
   const [requestStatus, setRequestStatus] = useState<Record<string, string>>({})
   const [currentUserNetId, setCurrentUserNetId] = useState<string | null>(null)
+  const [matches, setMatches] = useState<any[]>([])
 
   useEffect(() => {
     fetchCourses()
     fetchCurrentUser()
+    fetchMatches()
   }, [])
 
   const fetchCurrentUser = async () => {
@@ -53,6 +55,18 @@ export default function CoursesPage() {
       setError('Failed to load courses')
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const fetchMatches = async () => {
+    try {
+      const response = await fetch('/api/matches')
+      if (response.ok) {
+        const data = await response.json()
+        setMatches(data.matches)
+      }
+    } catch (error) {
+      // ignore
     }
   }
 
@@ -122,6 +136,26 @@ export default function CoursesPage() {
         setRequestStatus((prev) => ({ ...prev, [targetNetId]: data.error || 'error' }))
       } else {
         setRequestStatus((prev) => ({ ...prev, [targetNetId]: 'requested' }))
+        fetchMatches()
+      }
+    } catch {
+      setRequestStatus((prev) => ({ ...prev, [targetNetId]: 'error' }))
+    }
+  }
+
+  const handleUnrequest = async (courseId: string, targetNetId: string) => {
+    setRequestStatus((prev) => ({ ...prev, [targetNetId]: 'pending' }))
+    try {
+      const response = await fetch('/api/matches', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ courseId, targetNetId })
+      })
+      if (response.ok) {
+        setRequestStatus((prev) => ({ ...prev, [targetNetId]: '' }))
+        fetchMatches()
+      } else {
+        setRequestStatus((prev) => ({ ...prev, [targetNetId]: 'error' }))
       }
     } catch {
       setRequestStatus((prev) => ({ ...prev, [targetNetId]: 'error' }))
@@ -197,31 +231,55 @@ export default function CoursesPage() {
                       <div className="mt-2 p-2 bg-gray-50 rounded border border-gray-200" style={{ maxHeight: 200, overflowY: 'auto' }}>
                         <strong>Study Partners:</strong>
                         <ul className="list-disc ml-5">
-                          {studyPartners[course.id].length === 0 ? (
-                            <li className="text-gray-500">No other students yet.</li>
-                          ) : (
-                            studyPartners[course.id].map((partner) => (
-                              <li key={partner.netId} className="flex items-center justify-between mb-1">
-                                <span>{partner.name || partner.netId} ({partner.netId})</span>
-                                {currentUserNetId !== partner.netId && (
-                                  <button
-                                    onClick={() => handleRequest(course.id, partner.netId)}
-                                    className="ml-2 px-2 py-1 text-xs rounded bg-[#E84A27] text-white hover:bg-[#C73E1D] focus:outline-none"
-                                    disabled={requestStatus[partner.netId] === 'requested' || requestStatus[partner.netId] === 'pending'}
-                                  >
-                                    {requestStatus[partner.netId] === 'requested'
-                                      ? 'Requested'
-                                      : requestStatus[partner.netId] === 'pending'
-                                        ? 'Requesting...'
-                                        : 'Request'}
-                                  </button>
-                                )}
-                                {requestStatus[partner.netId] && requestStatus[partner.netId] !== 'requested' && requestStatus[partner.netId] !== 'pending' && (
-                                  <span className="ml-2 text-xs text-red-500">{requestStatus[partner.netId]}</span>
-                                )}
-                              </li>
-                            ))
-                          )}
+                          {(() => {
+                            // Build a map of unique partners for this course
+                            const uniquePartners = new Map();
+                            matches.forEach((m) => {
+                              if (m.course === course.id && m.user && m.user.netId !== currentUserNetId && m.status !== 'rejected') {
+                                // Only keep the first (most relevant) match for each partner
+                                if (!uniquePartners.has(m.user.netId)) {
+                                  uniquePartners.set(m.user.netId, m);
+                                }
+                              }
+                            });
+                            return studyPartners[course.id]
+                              .filter((partner) => partner.netId !== currentUserNetId && uniquePartners.has(partner.netId))
+                              .map((partner) => {
+                                const match = uniquePartners.get(partner.netId);
+                                return (
+                                  <li key={partner.netId} className="flex items-center justify-between mb-1">
+                                    <span>{partner.name || partner.netId} ({partner.netId})</span>
+                                    {match ? (
+                                      match.status === 'pending' ? (
+                                        <button
+                                          onClick={() => handleUnrequest(course.id, partner.netId)}
+                                          className="ml-2 px-2 py-1 text-xs rounded bg-gray-400 text-white hover:bg-gray-500 focus:outline-none"
+                                        >
+                                          Requested (Unrequest)
+                                        </button>
+                                      ) : match.status === 'accepted' ? (
+                                        <button
+                                          onClick={() => router.push(`/dm/${partner.netId}`)}
+                                          className="ml-2 px-2 py-1 text-xs rounded bg-blue-500 text-white hover:bg-blue-600 focus:outline-none"
+                                        >
+                                          Direct Message
+                                        </button>
+                                      ) : null
+                                    ) : (
+                                      <button
+                                        onClick={() => handleRequest(course.id, partner.netId)}
+                                        className="ml-2 px-2 py-1 text-xs rounded bg-[#E84A27] text-white hover:bg-[#C73E1D] focus:outline-none"
+                                      >
+                                        Request
+                                      </button>
+                                    )}
+                                    {requestStatus[partner.netId] && requestStatus[partner.netId] !== 'requested' && requestStatus[partner.netId] !== 'pending' && (
+                                      <span className="ml-2 text-xs text-red-500">{requestStatus[partner.netId]}</span>
+                                    )}
+                                  </li>
+                                );
+                              });
+                          })()}
                         </ul>
                       </div>
                     )}

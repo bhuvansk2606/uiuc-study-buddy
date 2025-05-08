@@ -52,23 +52,30 @@ export default function CourseChat({ courseId }: CourseChatProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newMessage.trim()) return
+    if (!courseId) {
+      setError('Course ID is not available. Please try again.')
+      return
+    }
 
     setIsLoading(true)
     setError(null)
     try {
+      const payload = {
+        content: newMessage,
+        courseId,
+      }
+      console.log('Sending message with payload:', payload)
       const response = await fetch('/api/messages', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          content: newMessage,
-          courseId,
-        }),
+        body: JSON.stringify(payload),
       })
 
       if (!response.ok) {
-        throw new Error('Failed to send message')
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to send message')
       }
 
       const data = await response.json()
@@ -79,7 +86,7 @@ export default function CourseChat({ courseId }: CourseChatProps) {
       }
     } catch (error) {
       console.error('Error sending message:', error)
-      setError('Failed to send message')
+      setError(error instanceof Error ? error.message : 'Failed to send message')
     } finally {
       setIsLoading(false)
     }

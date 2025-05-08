@@ -5,13 +5,23 @@ import { validateCourse } from '@/lib/courseValidation'
 
 // Mock data for courses
 const mockCourses = [
-  { id: '1', code: 'CS 225', name: 'Data Structures', semester: 'SP24' },
-  { id: '2', code: 'CS 374', name: 'Algorithms & Models of Computation', semester: 'SP24' },
-  { id: '3', code: 'CS 241', name: 'System Programming', semester: 'SP24' },
+  { id: '1', code: 'CS 225', name: 'Data Structures' },
+  { id: '2', code: 'CS 374', name: 'Algorithms & Models of Computation' },
+  { id: '3', code: 'CS 241', name: 'System Programming' },
 ]
 
 export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const code = searchParams.get('code');
+    if (code) {
+      const course = await prisma.course.findFirst({ where: { code } });
+      if (!course) {
+        return NextResponse.json({ error: 'Course not found' }, { status: 404 });
+      }
+      return NextResponse.json({ course });
+    }
+
     const cookieStore = await cookies();
     const userCookie = cookieStore.get('user');
 
@@ -98,22 +108,28 @@ export async function POST(request: Request) {
     }
 
     // Find or create the course
-    const course = await prisma.course.upsert({
-      where: { code },
-      update: {
-        users: {
-          connect: [{ netId: user.netId }]
+    let course = await prisma.course.findFirst({ where: { code } });
+    if (!course) {
+      course = await prisma.course.create({
+        data: {
+          code,
+          name,
+          users: {
+            connect: [{ netId: user.netId }]
+          }
         }
-      },
-      create: {
-        code,
-        name,
-        users: {
-          connect: [{ netId: user.netId }]
+      });
+    } else {
+      // Add user to course if not already enrolled
+      await prisma.course.update({
+        where: { id: course.id },
+        data: {
+          users: {
+            connect: [{ netId: user.netId }]
+          }
         }
-      }
-    })
-
+      });
+    }
     return NextResponse.json({ course })
   } catch (error) {
     console.error('Error creating course:', error)
