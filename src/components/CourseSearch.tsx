@@ -75,55 +75,30 @@ export default function CourseSearch({ onSelect, error }: CourseSearchProps) {
   return (
     <div className="space-y-4">
       <div className="relative">
-        <Combobox value={selectedCourse} onChange={handleSelect}>
-          <div className="relative">
-            <Combobox.Input
-              className="w-full rounded-md border border-gray-300 py-2 pl-3 pr-10 text-sm leading-5 text-gray-900 focus:border-[#E84A27] focus:ring-[#E84A27]"
-              onChange={(event) => setQuery(event.target.value)}
-              displayValue={(course: Course) => course ? `${course.code} - ${course.name}` : ''}
-              placeholder="Search by course code, name, or subject..."
-            />
-            <Combobox.Button className="absolute inset-y-0 right-0 flex items-center pr-2">
-              <ChevronUpDownIcon
-                className="h-5 w-5 text-gray-400"
-                aria-hidden="true"
-              />
-            </Combobox.Button>
-          </div>
-          <Combobox.Options className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
-            {filteredCourses.length === 0 && query !== '' ? (
-              <div className="relative cursor-default select-none py-2 px-4 text-gray-700">
-                Nothing found.
-              </div>
-            ) : (
-              filteredCourses.map((course) => (
-                <Combobox.Option
-                  key={course.code}
-                  className={({ active }) =>
-                    `relative cursor-default select-none py-2 pl-4 pr-4 ${
-                      active ? 'bg-[#E84A27] text-white' : 'text-gray-900'
-                    }`
-                  }
-                  value={course}
-                >
-                  {({ selected, active }) => (
-                    <div className="flex flex-col">
-                      <span className={`block truncate font-medium`}>
-                        {course.code}
-                      </span>
-                      <span className={`block truncate text-sm ${active ? 'text-white' : 'text-gray-500'}`}>
-                        {course.name}
-                      </span>
-                      <span className={`block truncate text-xs ${active ? 'text-white' : 'text-gray-400'}`}>
-                        {course.subject}
-                      </span>
-                    </div>
-                  )}
-                </Combobox.Option>
-              ))
-            )}
-          </Combobox.Options>
-        </Combobox>
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search by course code, name, or subject..."
+          className="w-full px-4 py-3 rounded-lg border border-white/20 bg-white text-[#0A1A2F] placeholder-[#0A1A2F]/60 focus:outline-none focus:ring-2 focus:ring-[#E84A27] focus:border-transparent"
+        />
+        {filteredCourses.length > 0 && (
+          <ul className="mt-2 max-h-60 overflow-auto rounded-lg border border-white/20 bg-white/10 backdrop-blur-sm">
+            {filteredCourses.map((course) => (
+              <li
+                key={course.code}
+                onClick={() => handleSelect(course)}
+                className="px-4 py-2 hover:bg-white/20 cursor-pointer text-white/90"
+              >
+                <div className="flex items-center">
+                  <span className="font-medium text-[#E84A27]">{course.code}</span>
+                  <span className="ml-2 text-sm">{course.name}</span>
+                  <span className="ml-2 text-xs text-white/70">({course.subject})</span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       {error && (

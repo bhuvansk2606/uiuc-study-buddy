@@ -4,9 +4,9 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import ClientProvider from "@/components/ClientProvider";
-import { AuthProvider } from "@/context/AuthContext";
+import Providers from "@/components/Providers";
 import Navbar from "@/components/Navbar";
+import AnimatedBackground from "@/components/AnimatedBackground";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -20,27 +20,18 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  let session;
-  try {
-    session = await getServerSession(authOptions);
-  } catch (error) {
-    console.error('Error getting session:', error);
-    session = null;
-  }
+  const session = await getServerSession(authOptions);
 
   return (
     <html lang="en">
       <body className={inter.className}>
-        <ClientProvider session={session}>
-          <AuthProvider>
-            <div className="min-h-screen bg-gray-50">
-              <Navbar />
-              <main className="container mx-auto px-4 py-8">
-                {children}
-              </main>
-            </div>
-          </AuthProvider>
-        </ClientProvider>
+        <Providers session={session}>
+          <AnimatedBackground />
+          <div className="relative z-10">
+            <Navbar />
+            <main>{children}</main>
+          </div>
+        </Providers>
       </body>
     </html>
   );

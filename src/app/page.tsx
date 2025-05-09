@@ -42,12 +42,12 @@ export default function Home() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <h1 className="text-4xl font-bold tracking-tight text-[#13294B] sm:text-6xl">
-            Never Study Alone at <span className="bg-gradient-to-r from-[#13294B] via-[#1A3A5F] to-[#2C5282] bg-clip-text text-transparent">UIUC</span>
+          <h1 className="text-4xl font-bold tracking-tight text-white sm:text-6xl">
+            Never Study Alone at <span className="bg-gradient-to-r from-[#FF5F05] via-[#E84A27] to-[#D73D1C] bg-clip-text text-transparent">UIUC</span>
           </h1>
           <div className="mt-6 space-y-2">
             <motion.p 
-              className="text-2xl font-semibold text-[#E84A27]"
+              className="text-2xl font-semibold text-white"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
@@ -55,12 +55,12 @@ export default function Home() {
               Unlock peer power no platform offers
             </motion.p>
             <motion.p 
-              className="text-2xl font-semibold text-[#13294B]"
+              className="text-2xl font-semibold text-white"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.4 }}
             >
-              so you conquer courses only Illini can
+              so you conquer courses only <span className="bg-gradient-to-r from-[#FF5F05] via-[#E84A27] to-[#D73D1C] bg-clip-text text-transparent">Illini</span> can
             </motion.p>
           </div>
           <motion.div 
@@ -76,7 +76,7 @@ export default function Home() {
               Get Matched Now
             </button>
             {status === "authenticated" && (
-              <Link href="/matches" className="text-sm font-semibold leading-6 text-[#13294B]">
+              <Link href="/matches" className="text-sm font-semibold leading-6 text-white hover:text-[#E84A27] transition-colors">
                 View Matches <span aria-hidden="true">→</span>
               </Link>
             )}
@@ -100,8 +100,8 @@ export default function Home() {
         transition={{ duration: 0.5 }}
       >
         <div className="mx-auto max-w-2xl lg:text-center">
-          <h2 className="text-base font-semibold leading-7 text-[#E84A27]">Join 5,000+ Illini Already Syncing</h2>
-          <p className="mt-2 text-3xl font-bold tracking-tight text-[#13294B] sm:text-4xl">
+          <h2 className="text-base font-semibold leading-7 bg-gradient-to-r from-[#FF5F05] via-[#E84A27] to-[#D73D1C] bg-clip-text text-transparent">Join 5,000+ Illini Already Syncing</h2>
+          <p className="mt-2 text-3xl font-bold tracking-tight text-white sm:text-4xl">
             Everything you need to succeed in your courses
           </p>
         </div>
@@ -114,42 +114,42 @@ export default function Home() {
         >
           <dl className="grid max-w-xl grid-cols-1 gap-x-8 gap-y-16 lg:max-w-none lg:grid-cols-3">
             <motion.div 
-              className="flex flex-col p-8 rounded-2xl bg-white shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-gray-100"
+              className="flex flex-col p-8 rounded-2xl bg-white/10 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-white/20"
               variants={fadeInUp}
               whileHover={{ scale: 1.02 }}
             >
-              <dt className="flex items-center gap-x-3 text-xl font-semibold leading-7 text-[#13294B] mb-4">
+              <dt className="flex items-center gap-x-3 text-xl font-semibold leading-7 bg-gradient-to-r from-[#FF5F05] via-[#E84A27] to-[#D73D1C] bg-clip-text text-transparent mb-4">
                 Course Matching
               </dt>
-              <dd className="flex flex-auto flex-col text-base leading-7 text-gray-600">
+              <dd className="flex flex-auto flex-col text-base leading-7 text-white">
                 <p className="flex-auto">
                   Instantly connect with peers in your current classes (MATH 231, CS 225, CHEM 102...)
                 </p>
               </dd>
             </motion.div>
             <motion.div 
-              className="flex flex-col p-8 rounded-2xl bg-white shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-gray-100"
+              className="flex flex-col p-8 rounded-2xl bg-white/10 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-white/20"
               variants={fadeInUp}
               whileHover={{ scale: 1.02 }}
             >
-              <dt className="flex items-center gap-x-3 text-xl font-semibold leading-7 text-[#13294B] mb-4">
+              <dt className="flex items-center gap-x-3 text-xl font-semibold leading-7 bg-gradient-to-r from-[#FF5F05] via-[#E84A27] to-[#D73D1C] bg-clip-text text-transparent mb-4">
                 Study Squads
               </dt>
-              <dd className="flex flex-auto flex-col text-base leading-7 text-gray-600">
+              <dd className="flex flex-auto flex-col text-base leading-7 text-white">
                 <p className="flex-auto">
                   Create or join groups for projects, exam prep, or homework help
                 </p>
               </dd>
             </motion.div>
             <motion.div 
-              className="flex flex-col p-8 rounded-2xl bg-white shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-gray-100"
+              className="flex flex-col p-8 rounded-2xl bg-white/10 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-white/20"
               variants={fadeInUp}
               whileHover={{ scale: 1.02 }}
             >
-              <dt className="flex items-center gap-x-3 text-xl font-semibold leading-7 text-[#13294B] mb-4">
+              <dt className="flex items-center gap-x-3 text-xl font-semibold leading-7 bg-gradient-to-r from-[#FF5F05] via-[#E84A27] to-[#D73D1C] bg-clip-text text-transparent mb-4">
                 Crowdsourced Notes
               </dt>
-              <dd className="flex flex-auto flex-col text-base leading-7 text-gray-600">
+              <dd className="flex flex-auto flex-col text-base leading-7 text-white">
                 <p className="flex-auto">
                   Share/access study guides, past exams, and cheat sheets
                 </p>

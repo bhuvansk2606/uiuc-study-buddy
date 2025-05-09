@@ -1,190 +1,204 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@/context/AuthContext'
+import { motion } from 'framer-motion'
 
 interface Course {
-  id: string
   code: string
   name: string
+  subject: string
 }
 
 interface User {
-  id: string
-  name: string
+  name: string | null
   netId: string
 }
 
 interface Match {
   id: string
-  course: Course
+  course: string
   user: User
   status: 'pending' | 'accepted' | 'rejected'
 }
 
 export default function MatchesPage() {
-  const { user, loading } = useAuth()
+  const { data: session, status } = useSession()
   const router = useRouter()
   const [courses, setCourses] = useState<Course[]>([])
   const [matches, setMatches] = useState<Match[]>([])
-  const [error, setError] = useState('')
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.push('/auth')
+    if (status === 'unauthenticated') {
+      router.push('/')
     }
-  }, [loading, user, router])
+  }, [status, router])
 
   useEffect(() => {
-    if (user) {
-      fetchCourses()
-      fetchMatches()
-    }
-  }, [user])
+    const fetchData = async () => {
+      try {
+        const [coursesRes, matchesRes] = await Promise.all([
+          fetch('/api/courses'),
+          fetch('/api/matches')
+        ])
 
-  const fetchCourses = async () => {
-    try {
-      const response = await fetch('/api/courses')
-      if (response.ok) {
-        const data = await response.json()
-        setCourses(data.courses)
+        if (coursesRes.ok && matchesRes.ok) {
+          const [coursesData, matchesData] = await Promise.all([
+            coursesRes.json(),
+            matchesRes.json()
+          ])
+          setCourses(coursesData.courses)
+          setMatches(matchesData.matches)
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error)
+      } finally {
+        setIsLoading(false)
       }
-    } catch (error) {
-      console.error('Failed to fetch courses:', error)
+    }
+
+    fetchData()
+  }, [])
+
+  const fadeInUp = {
+    initial: { opacity: 0, y: 20 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 0.5 }
+  }
+
+  const staggerContainer = {
+    animate: {
+      transition: {
+        staggerChildren: 0.2
+      }
     }
   }
 
-  const fetchMatches = async () => {
-    try {
-      const response = await fetch('/api/matches')
-      if (response.ok) {
-        const data = await response.json()
-        setMatches(data.matches)
-      }
-    } catch (error) {
-      console.error('Failed to fetch matches:', error)
-    }
-  }
-
-  const handleMatchResponse = async (matchId: string, status: 'accepted' | 'rejected') => {
-    try {
-      const response = await fetch('/api/matches', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ matchId, status }),
-      })
-
-      if (response.ok) {
-        fetchMatches()
-      } else {
-        const data = await response.json()
-        setError(data.error || 'Failed to update match status')
-      }
-    } catch (error) {
-      setError('An error occurred. Please try again.')
-    }
-  }
-
-  if (loading) {
+  if (isLoading) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#E84A27]"></div>
+      <div className="min-h-screen bg-[#13294B] py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div 
+            className="text-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
+          >
+            <h1 className="text-5xl font-bold bg-gradient-to-r from-[#FF5F05] via-[#E84A27] to-[#D73D1C] bg-clip-text text-transparent mb-8">
+              Study Partners
+            </h1>
+            <div className="flex flex-col items-center justify-center space-y-6">
+              <motion.div
+                className="relative w-16 h-16"
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+              >
+                <div className="absolute inset-0 border-4 border-[#E84A27]/20 rounded-full"></div>
+                <div className="absolute inset-0 border-4 border-t-[#E84A27] rounded-full"></div>
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="text-white/80 text-lg"
+              >
+                Loading your study partners...
+              </motion.div>
+            </div>
+          </motion.div>
+        </div>
       </div>
     )
   }
 
-  if (!user) {
-    return null
-  }
-
   return (
-    <div className="max-w-4xl mx-auto">
-      <h1 className="text-3xl font-bold text-[#13294B] mb-8">Study Partners</h1>
+    <div className="min-h-screen bg-[#13294B] py-16">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <motion.div 
+          className="text-center mb-16"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <h1 className="text-5xl font-bold bg-gradient-to-r from-[#FF5F05] via-[#E84A27] to-[#D73D1C] bg-clip-text text-transparent mb-4">
+            Study Partners
+          </h1>
+        </motion.div>
 
-      <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-        <h2 className="text-xl font-semibold text-[#13294B] mb-4">My Courses</h2>
-        {courses.length === 0 ? (
-          <p className="text-gray-500">No courses added yet.</p>
-        ) : (
-          <div className="space-y-4">
-            {courses.map((course) => (
-              <div
-                key={course.id}
-                className="flex items-center justify-between p-4 border rounded-lg"
-              >
-                <div>
-                  <h3 className="font-medium text-[#13294B]">{course.code}</h3>
-                  <p className="text-gray-600">{course.name}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-xl font-semibold text-[#13294B] mb-4">My Matches</h2>
-        {matches.length === 0 ? (
-          <p className="text-gray-500">No matches yet.</p>
-        ) : (
-          <div className="space-y-4">
-            {(() => {
-              // Only show unique matches per user/course pair, prefer pending/accepted
-              const uniqueMap = new Map();
-              matches.forEach((match) => {
-                const key = `${match.course.id}-${match.user.netId}`;
-                if (!uniqueMap.has(key) || (uniqueMap.get(key).status !== 'pending' && match.status === 'pending') || (uniqueMap.get(key).status !== 'accepted' && match.status === 'accepted')) {
-                  uniqueMap.set(key, match);
-                }
-              });
-              return Array.from(uniqueMap.values()).map((match) => (
-                <div
-                  key={match.id}
-                  className="flex items-center justify-between p-4 border rounded-lg"
-                >
-                  <div>
-                    <h3 className="font-medium text-[#13294B]">
-                      {match.course.code} - {match.course.name}
-                    </h3>
-                    <p className="text-gray-600">
-                      Study Partner: {match.user.name} ({match.user.netId})
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      Status: {match.status.charAt(0).toUpperCase() + match.status.slice(1)}
-                    </p>
-                  </div>
-                  {match.status === 'pending' && (
-                    <div className="space-x-2">
-                      <button
-                        onClick={() => handleMatchResponse(match.id, 'accepted')}
-                        className="bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-600 focus:ring-offset-2"
-                      >
-                        Accept
-                      </button>
-                      <button
-                        onClick={() => handleMatchResponse(match.id, 'rejected')}
-                        className="bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2"
-                      >
-                        Reject
-                      </button>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <motion.div
+            variants={fadeInUp}
+            initial="initial"
+            animate="animate"
+            className="flex flex-col p-8 rounded-2xl bg-white/10 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-white/20"
+          >
+            <h2 className="text-2xl font-semibold text-white mb-4">My Courses</h2>
+            {courses.length === 0 ? (
+              <p className="text-white/80">No courses added yet.</p>
+            ) : (
+              <ul className="space-y-4">
+                {courses.map((course) => (
+                  <motion.li
+                    key={course.code}
+                    whileHover={{ scale: 1.02 }}
+                    className="flex items-center justify-between p-4 rounded-lg bg-white/5 border border-white/10"
+                  >
+                    <div>
+                      <p className="text-[#E84A27] font-medium">{course.code}</p>
+                      <p className="text-white/80 text-sm">{course.name}</p>
                     </div>
-                  )}
-                  {match.status === 'accepted' && (
-                    <button
-                      onClick={() => router.push(`/dm/${match.user.netId}`)}
-                      className="bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => router.push(`/courses`)}
+                      className="px-4 py-2 text-sm font-medium text-white bg-[#E84A27] rounded-lg hover:bg-[#C73E1D] transition-colors"
                     >
-                      Direct Message
-                    </button>
-                  )}
-                </div>
-              ));
-            })()}
-          </div>
-        )}
+                      View Course
+                    </motion.button>
+                  </motion.li>
+                ))}
+              </ul>
+            )}
+          </motion.div>
+
+          <motion.div
+            variants={fadeInUp}
+            initial="initial"
+            animate="animate"
+            transition={{ delay: 0.2 }}
+            className="flex flex-col p-8 rounded-2xl bg-white/10 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-white/20"
+          >
+            <h2 className="text-2xl font-semibold text-white mb-4">My Matches</h2>
+            {matches.length === 0 ? (
+              <p className="text-white/80">No matches yet.</p>
+            ) : (
+              <ul className="space-y-4">
+                {matches.map((match) => (
+                  <motion.li
+                    key={match.id}
+                    whileHover={{ scale: 1.02 }}
+                    className="flex items-center justify-between p-4 rounded-lg bg-white/5 border border-white/10"
+                  >
+                    <div>
+                      <p className="text-[#E84A27] font-medium">{match.course}</p>
+                      <p className="text-white/80 text-sm">{match.user?.name || match.user?.netId}</p>
+                    </div>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => router.push(`/dm/${match.user?.netId}`)}
+                      className="px-4 py-2 text-sm font-medium text-white bg-[#E84A27] rounded-lg hover:bg-[#C73E1D] transition-colors"
+                    >
+                      Message
+                    </motion.button>
+                  </motion.li>
+                ))}
+              </ul>
+            )}
+          </motion.div>
+        </div>
       </div>
     </div>
   )
