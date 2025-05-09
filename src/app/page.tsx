@@ -1,8 +1,23 @@
+'use client'
+
 import Link from 'next/link'
+import { useSession, signIn } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import AnimatedHashtag from '@/components/AnimatedHashtag'
 import Image from 'next/image'
 
 export default function Home() {
+  const { data: session, status } = useSession()
+  const router = useRouter()
+
+  const handleGetStarted = () => {
+    if (status === "authenticated") {
+      router.push("/matches")
+    } else {
+      signIn("google", { callbackUrl: "/matches" })
+    }
+  }
+
   return (
     <div className="relative isolate">
       <div className="mx-auto max-w-7xl px-6 py-24 sm:py-32 lg:px-8">
@@ -14,15 +29,17 @@ export default function Home() {
             Connect with fellow UIUC students taking the same courses as you. Form study groups, share resources, and ace your classes together.
           </p>
           <div className="mt-10 flex items-center justify-center gap-x-6">
-            <Link
-              href="/courses"
+            <button
+              onClick={handleGetStarted}
               className="rounded-md bg-[#E84A27] px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#D73D1C] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E84A27]"
             >
               Get Started
-            </Link>
-            <Link href="/matches" className="text-sm font-semibold leading-6 text-[#13294B]">
-              View Matches <span aria-hidden="true">→</span>
-            </Link>
+            </button>
+            {status === "authenticated" && (
+              <Link href="/matches" className="text-sm font-semibold leading-6 text-[#13294B]">
+                View Matches <span aria-hidden="true">→</span>
+              </Link>
+            )}
           </div>
           <div className="mt-8">
             <AnimatedHashtag />
