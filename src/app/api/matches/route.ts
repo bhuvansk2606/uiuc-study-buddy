@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
 // Mock data for matches
@@ -20,24 +21,20 @@ const mockMatches = [
 
 export async function GET() {
   try {
-    const cookieStore = await cookies()
-    const userCookie = cookieStore.get('user')
-
-    if (!userCookie) {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.email) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       )
     }
 
-    const user = JSON.parse(userCookie.value)
-
     // Find all matches where the user is involved
     const matches = await prisma.match.findMany({
       where: {
         users: {
           some: {
-            netId: user.netId
+            email: session.user.email
           }
         }
       },
@@ -48,7 +45,7 @@ export async function GET() {
 
     // Format the matches for the frontend
     const formattedMatches = await Promise.all(matches.map(async (match) => {
-      const otherUser = match.users.find((u) => u.netId !== user.netId)
+      const otherUser = match.users.find((u) => u.email !== session.user.email)
       // Fetch course details
       let courseObj = { id: match.course, code: '-', name: '-' }
       try {
@@ -64,6 +61,7 @@ export async function GET() {
           ? {
               id: otherUser.id,
               name: otherUser.name,
+              email: otherUser.email,
               netId: otherUser.netId
             }
           : null,
@@ -83,52 +81,56 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const cookieStore = await cookies();
-    const userCookie = cookieStore.get('user');
-    if (!userCookie) {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-    const user = JSON.parse(userCookie.value)
-    const { courseId, targetNetId } = await request.json()
-    if (!courseId || !targetNetId) {
-      return NextResponse.json({ error: 'Missing courseId or targetNetId' }, { status: 400 })
+
+    const { courseId, targetEmail } = await request.json()
+    if (!courseId || !targetEmail) {
+      return NextResponse.json({ error: 'Missing courseId or targetEmail' }, { status: 400 })
     }
+
     // Find the target user
-    const targetUser = await prisma.user.findUnique({ where: { netId: targetNetId } })
+    const targetUser = await prisma.user.findUnique({ where: { email: targetEmail } })
     if (!targetUser) {
       return NextResponse.json({ error: 'Target user not found' }, { status: 404 })
     }
+
     // Prevent duplicate matches
     const existingMatch = await prisma.match.findFirst({
       where: {
         course: courseId,
         users: {
-          some: { netId: user.netId }
+          some: { email: session.user.email }
         },
         AND: {
           users: {
-            some: { netId: targetNetId }
+            some: { email: targetEmail }
           }
         },
         status: { in: ['pending', 'accepted'] }
       }
     })
+
     if (existingMatch) {
       return NextResponse.json({ match: existingMatch })
     }
+
     // Create a match (pending)
     const match = await prisma.match.create({
       data: {
         users: {
           connect: [
-            { netId: user.netId },
-            { netId: targetNetId }
+            { email: session.user.email },
+            { email: targetEmail }
           ]
         },
         course: courseId,
         status: 'pending'
       }
     })
+
     return NextResponse.json({ match })
   } catch (error) {
     console.error('Error creating match:', error)
@@ -136,37 +138,38 @@ export async function POST(request: Request) {
   }
 }
 
-// DELETE handler to allow unrequesting a pending match
 export async function DELETE(request: Request) {
   try {
-    const cookieStore = await cookies();
-    const userCookie = cookieStore.get('user');
-    if (!userCookie) {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-    const user = JSON.parse(userCookie.value)
-    const { courseId, targetNetId } = await request.json()
-    if (!courseId || !targetNetId) {
-      return NextResponse.json({ error: 'Missing courseId or targetNetId' }, { status: 400 })
+
+    const { courseId, targetEmail } = await request.json()
+    if (!courseId || !targetEmail) {
+      return NextResponse.json({ error: 'Missing courseId or targetEmail' }, { status: 400 })
     }
+
     // Find the pending match
     const match = await prisma.match.findFirst({
       where: {
         course: courseId,
         users: {
-          some: { netId: user.netId }
+          some: { email: session.user.email }
         },
         AND: {
           users: {
-            some: { netId: targetNetId }
+            some: { email: targetEmail }
           }
         },
         status: 'pending'
       }
     })
+
     if (!match) {
       return NextResponse.json({ error: 'No pending match found' }, { status: 404 })
     }
+
     await prisma.match.delete({ where: { id: match.id } })
     return NextResponse.json({ success: true })
   } catch (error) {
@@ -177,10 +180,8 @@ export async function DELETE(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const cookieStore = await cookies()
-    const userCookie = cookieStore.get('user')
-
-    if (!userCookie) {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.email) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }

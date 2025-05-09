@@ -13,7 +13,8 @@ interface Course {
 interface User {
   id: string
   name: string
-  netId: string
+  email: string
+  netId?: string
 }
 
 interface Match {
@@ -135,7 +136,7 @@ export default function MatchesPage() {
               // Only show unique matches per user/course pair, prefer pending/accepted
               const uniqueMap = new Map();
               matches.forEach((match) => {
-                const key = `${match.course.id}-${match.user.netId}`;
+                const key = `${match.course.id}-${match.user.email}`;
                 if (!uniqueMap.has(key) || (uniqueMap.get(key).status !== 'pending' && match.status === 'pending') || (uniqueMap.get(key).status !== 'accepted' && match.status === 'accepted')) {
                   uniqueMap.set(key, match);
                 }
@@ -150,7 +151,7 @@ export default function MatchesPage() {
                       {match.course.code} - {match.course.name}
                     </h3>
                     <p className="text-gray-600">
-                      Study Partner: {match.user.name} ({match.user.netId})
+                      Study Partner: {match.user.name} {match.user.netId ? `(${match.user.netId})` : ''}
                     </p>
                     <p className="text-sm text-gray-500">
                       Status: {match.status.charAt(0).toUpperCase() + match.status.slice(1)}
@@ -174,7 +175,7 @@ export default function MatchesPage() {
                   )}
                   {match.status === 'accepted' && (
                     <button
-                      onClick={() => router.push(`/dm/${match.user.netId}`)}
+                      onClick={() => router.push(`/dm/${match.user.email}`)}
                       className="bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                     >
                       Direct Message

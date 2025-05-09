@@ -1,23 +1,22 @@
 import { NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
 export async function DELETE(request: Request, context: any) {
   try {
-    const cookieStore = await cookies();
-    const userCookie = cookieStore.get('user');
-    if (!userCookie) {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-    const user = JSON.parse(userCookie.value)
     const params = await context.params;
     const courseId = params.id;
-    // Disconnect the user from the course
+    // Disconnect the user from the course by email
     await prisma.course.update({
       where: { id: courseId },
       data: {
         users: {
-          disconnect: { netId: user.netId }
+          disconnect: { email: session.user.email }
         }
       }
     })

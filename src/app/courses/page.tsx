@@ -12,8 +12,17 @@ interface Course {
 }
 
 interface StudyPartner {
-  name: string | null
-  netId: string
+  id: string
+  name: string
+  netId?: string
+  email: string
+}
+
+interface Match {
+  id: string
+  course: Course
+  user: StudyPartner
+  status: 'pending' | 'accepted' | 'rejected'
 }
 
 export default function CoursesPage() {
@@ -24,7 +33,7 @@ export default function CoursesPage() {
   const [studyPartners, setStudyPartners] = useState<Record<string, StudyPartner[]>>({})
   const [showPartnersFor, setShowPartnersFor] = useState<string | null>(null)
   const [requestStatus, setRequestStatus] = useState<Record<string, string>>({})
-  const [currentUserNetId, setCurrentUserNetId] = useState<string | null>(null)
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null)
   const [matches, setMatches] = useState<any[]>([])
 
   useEffect(() => {
@@ -38,7 +47,7 @@ export default function CoursesPage() {
       const res = await fetch('/api/auth/session')
       if (res.ok) {
         const data = await res.json()
-        setCurrentUserNetId(data.user?.netId || null)
+        setCurrentUserEmail(data.user?.email || null)
       }
     } catch {}
   }
@@ -123,42 +132,42 @@ export default function CoursesPage() {
     }
   }
 
-  const handleRequest = async (courseId: string, targetNetId: string) => {
-    setRequestStatus((prev) => ({ ...prev, [targetNetId]: 'pending' }))
+  const handleRequest = async (courseId: string, targetEmail: string) => {
+    setRequestStatus((prev) => ({ ...prev, [targetEmail]: 'pending' }))
     try {
       const response = await fetch('/api/matches', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ courseId, targetNetId })
+        body: JSON.stringify({ courseId, targetEmail })
       })
       if (!response.ok) {
         const data = await response.json()
-        setRequestStatus((prev) => ({ ...prev, [targetNetId]: data.error || 'error' }))
+        setRequestStatus((prev) => ({ ...prev, [targetEmail]: data.error || 'error' }))
       } else {
-        setRequestStatus((prev) => ({ ...prev, [targetNetId]: 'requested' }))
+        setRequestStatus((prev) => ({ ...prev, [targetEmail]: 'requested' }))
         fetchMatches()
       }
     } catch {
-      setRequestStatus((prev) => ({ ...prev, [targetNetId]: 'error' }))
+      setRequestStatus((prev) => ({ ...prev, [targetEmail]: 'error' }))
     }
   }
 
-  const handleUnrequest = async (courseId: string, targetNetId: string) => {
-    setRequestStatus((prev) => ({ ...prev, [targetNetId]: 'pending' }))
+  const handleUnrequest = async (courseId: string, targetEmail: string) => {
+    setRequestStatus((prev) => ({ ...prev, [targetEmail]: 'pending' }))
     try {
       const response = await fetch('/api/matches', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ courseId, targetNetId })
+        body: JSON.stringify({ courseId, targetEmail })
       })
       if (response.ok) {
-        setRequestStatus((prev) => ({ ...prev, [targetNetId]: '' }))
+        setRequestStatus((prev) => ({ ...prev, [targetEmail]: '' }))
         fetchMatches()
       } else {
-        setRequestStatus((prev) => ({ ...prev, [targetNetId]: 'error' }))
+        setRequestStatus((prev) => ({ ...prev, [targetEmail]: 'error' }))
       }
     } catch {
-      setRequestStatus((prev) => ({ ...prev, [targetNetId]: 'error' }))
+      setRequestStatus((prev) => ({ ...prev, [targetEmail]: 'error' }))
     }
   }
 
@@ -235,31 +244,31 @@ export default function CoursesPage() {
                             // Build a map of unique partners for this course
                             const uniquePartners = new Map();
                             matches.forEach((m) => {
-                              if (m.course === course.id && m.user && m.user.netId !== currentUserNetId && m.status !== 'rejected') {
+                              if (m.course === course.id && m.user && m.user.email !== currentUserEmail && m.status !== 'rejected') {
                                 // Only keep the first (most relevant) match for each partner
-                                if (!uniquePartners.has(m.user.netId)) {
-                                  uniquePartners.set(m.user.netId, m);
+                                if (!uniquePartners.has(m.user.email)) {
+                                  uniquePartners.set(m.user.email, m);
                                 }
                               }
                             });
                             return studyPartners[course.id]
-                              .filter((partner) => partner.netId !== currentUserNetId && uniquePartners.has(partner.netId))
+                              .filter((partner) => partner.email !== currentUserEmail && uniquePartners.has(partner.email))
                               .map((partner) => {
-                                const match = uniquePartners.get(partner.netId);
+                                const match = uniquePartners.get(partner.email);
                                 return (
-                                  <li key={partner.netId} className="flex items-center justify-between mb-1">
-                                    <span>{partner.name || partner.netId} ({partner.netId})</span>
+                                  <li key={partner.email} className="flex items-center justify-between mb-1">
+                                    <span>{partner.name || partner.email} {partner.netId ? `(${partner.netId})` : ''}</span>
                                     {match ? (
                                       match.status === 'pending' ? (
                                         <button
-                                          onClick={() => handleUnrequest(course.id, partner.netId)}
+                                          onClick={() => handleUnrequest(course.id, partner.email)}
                                           className="ml-2 px-2 py-1 text-xs rounded bg-gray-400 text-white hover:bg-gray-500 focus:outline-none"
                                         >
                                           Requested (Unrequest)
                                         </button>
                                       ) : match.status === 'accepted' ? (
                                         <button
-                                          onClick={() => router.push(`/dm/${partner.netId}`)}
+                                          onClick={() => router.push(`/dm/${partner.email}`)}
                                           className="ml-2 px-2 py-1 text-xs rounded bg-blue-500 text-white hover:bg-blue-600 focus:outline-none"
                                         >
                                           Direct Message
@@ -267,14 +276,11 @@ export default function CoursesPage() {
                                       ) : null
                                     ) : (
                                       <button
-                                        onClick={() => handleRequest(course.id, partner.netId)}
-                                        className="ml-2 px-2 py-1 text-xs rounded bg-[#E84A27] text-white hover:bg-[#C73E1D] focus:outline-none"
+                                        onClick={() => handleRequest(course.id, partner.email)}
+                                        className="ml-2 px-2 py-1 text-xs rounded bg-[#E84A27] text-white hover:bg-[#D73D1C] focus:outline-none"
                                       >
-                                        Request
+                                        Request Match
                                       </button>
-                                    )}
-                                    {requestStatus[partner.netId] && requestStatus[partner.netId] !== 'requested' && requestStatus[partner.netId] !== 'pending' && (
-                                      <span className="ml-2 text-xs text-red-500">{requestStatus[partner.netId]}</span>
                                     )}
                                   </li>
                                 );

@@ -3,8 +3,24 @@ import { prisma } from "@/lib/prisma"
 import { NextAuthOptions } from "next-auth"
 import GoogleProvider from "next-auth/providers/google"
 
+// Debug environment variables
+console.log('Environment Variables:', {
+  NEXTAUTH_URL: process.env.NEXTAUTH_URL,
+  NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET ? 'Set' : 'Not Set',
+  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID ? 'Set' : 'Not Set',
+  GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET ? 'Set' : 'Not Set'
+})
+
 if (!process.env.NEXTAUTH_SECRET) {
   throw new Error("Please provide process.env.NEXTAUTH_SECRET")
+}
+
+if (!process.env.GOOGLE_CLIENT_ID) {
+  throw new Error("Please provide process.env.GOOGLE_CLIENT_ID")
+}
+
+if (!process.env.GOOGLE_CLIENT_SECRET) {
+  throw new Error("Please provide process.env.GOOGLE_CLIENT_SECRET")
 }
 
 export const authOptions: NextAuthOptions = {
@@ -19,6 +35,7 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async signIn({ user, account, profile }) {
       console.log('SignIn callback - Full data:', { user, account, profile })
+      // Removed manual upsert to let PrismaAdapter handle user/account creation
       if (user.email?.endsWith('@illinois.edu')) {
         return true
       }

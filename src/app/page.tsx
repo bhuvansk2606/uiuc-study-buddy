@@ -73,7 +73,7 @@ export default function Home() {
               onClick={handleGetStarted}
               className="rounded-md bg-[#E84A27] px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#D73D1C] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E84A27]"
             >
-              Get Matched Now
+              Lock In
             </button>
             {status === "authenticated" && (
               <Link href="/matches" className="text-sm font-semibold leading-6 text-[#13294B]">
