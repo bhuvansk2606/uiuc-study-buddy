@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
+import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/prisma'
 import { validateCourse } from '@/lib/courseValidation'
+import { authOptions } from '@/lib/auth'
+import { User, Course } from '@prisma/client'
 
 // Mock data for courses
 const mockCourses = [
@@ -12,6 +14,15 @@ const mockCourses = [
 
 export async function GET(request: Request) {
   try {
+    const session = await getServerSession(authOptions)
+
+    if (!session?.user?.email) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
     const { searchParams } = new URL(request.url);
     const code = searchParams.get('code');
     if (code) {
@@ -22,26 +33,13 @@ export async function GET(request: Request) {
       return NextResponse.json({ course });
     }
 
-    const cookieStore = await cookies();
-    const userCookie = cookieStore.get('user');
-
-    if (!userCookie) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-
-    const user = JSON.parse(userCookie.value)
-    const courses = await prisma.course.findMany({
-      where: {
-        users: {
-          some: {
-            netId: user.netId
-          }
-        }
-      }
-    })
+    // Get user's courses using a raw query
+    const courses = await prisma.$queryRaw`
+      SELECT c.* FROM Course c
+      INNER JOIN _CourseToUser cu ON c.id = cu.B
+      INNER JOIN User u ON u.id = cu.A
+      WHERE u.email = ${session.user.email}
+    `
 
     return NextResponse.json({ courses })
   } catch (error) {
@@ -55,17 +53,15 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const cookieStore = await cookies();
-    const userCookie = cookieStore.get('user');
+    const session = await getServerSession(authOptions)
 
-    if (!userCookie) {
+    if (!session?.user?.email) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       )
     }
 
-    const user = JSON.parse(userCookie.value)
     const { code, name } = await request.json()
 
     // Validate course against catalog
@@ -77,11 +73,13 @@ export async function POST(request: Request) {
       )
     }
 
-    // Check if user exists in the database
-    const dbUser = await prisma.user.findUnique({
-      where: { netId: user.netId }
-    });
-    if (!dbUser) {
+    // Check if user exists in the database using raw query
+    const users = await prisma.$queryRaw<User[]>`
+      SELECT * FROM User WHERE email = ${session.user.email}
+    `
+    const user = users[0]
+
+    if (!user) {
       return NextResponse.json(
         { error: 'User not found in database' },
         { status: 400 }
@@ -89,16 +87,13 @@ export async function POST(request: Request) {
     }
 
     // Check if user is already enrolled in this course
-    const existingEnrollment = await prisma.course.findFirst({
-      where: {
-        code,
-        users: {
-          some: {
-            netId: user.netId
-          }
-        }
-      }
-    })
+    const existingEnrollments = await prisma.$queryRaw<Course[]>`
+      SELECT c.* FROM Course c
+      INNER JOIN _CourseToUser cu ON c.id = cu.B
+      INNER JOIN User u ON u.id = cu.A
+      WHERE u.email = ${session.user.email} AND c.code = ${code}
+    `
+    const existingEnrollment = existingEnrollments[0]
 
     if (existingEnrollment) {
       return NextResponse.json(
@@ -115,7 +110,7 @@ export async function POST(request: Request) {
           code,
           name,
           users: {
-            connect: [{ netId: user.netId }]
+            connect: [{ id: user.id }]
           }
         }
       });
@@ -125,7 +120,7 @@ export async function POST(request: Request) {
         where: { id: course.id },
         data: {
           users: {
-            connect: [{ netId: user.netId }]
+            connect: [{ id: user.id }]
           }
         }
       });
