@@ -16,6 +16,7 @@ const handler = NextAuth({
   ],
   callbacks: {
     signIn: async ({ user, account, profile }) => {
+      console.log('SignIn callback:', { user, account, profile })
       // Check if the email ends with @illinois.edu
       if (user.email?.endsWith('@illinois.edu')) {
         return true
@@ -24,12 +25,14 @@ const handler = NextAuth({
       return false
     },
     session: async ({ session, user }) => {
+      console.log('Session callback:', { session, user })
       if (session?.user && typeof user.id === 'string') {
         (session.user as any).id = user.id
       }
       return session
     },
     redirect: async ({ url, baseUrl }) => {
+      console.log('Redirect callback:', { url, baseUrl })
       // Allows relative callback URLs
       if (url.startsWith("/")) return `${baseUrl}${url}`
       // Allows callback URLs on the same origin
@@ -41,6 +44,7 @@ const handler = NextAuth({
     error: '/auth/error', // Custom error page
     signIn: '/',
   },
+  debug: true, // Enable debug messages
 })
 
 export { handler as GET, handler as POST } 

@@ -2,74 +2,62 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 
 interface User {
   name: string
-  netId: string
+  email: string
+  id: string
 }
 
 interface AuthContextType {
   user: User | null
   loading: boolean
-  signIn: (name: string, netId: string, phoneNumber: string) => Promise<void>
   signOut: () => void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const { data: session, status } = useSession()
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
 
   useEffect(() => {
-    // Check for existing session
-    const checkSession = async () => {
-      try {
-        const response = await fetch('/api/auth/session')
-        if (response.ok) {
-          const data = await response.json()
-          setUser(data.user)
-        }
-      } catch (error) {
-        console.error('Failed to check session:', error)
-      } finally {
-        setLoading(false)
+    console.log('AuthContext - Session status:', status)
+    console.log('AuthContext - Session data:', session)
+
+    if (status === 'loading') {
+      setLoading(true)
+    } else if (session?.user) {
+      // Extract user data from session
+      const userData = {
+        name: session.user.name || '',
+        email: session.user.email || '',
+        id: (session.user as any).id || ''
       }
+      console.log('AuthContext - Setting user data:', userData)
+      setUser(userData)
+      setLoading(false)
+    } else {
+      console.log('AuthContext - No session, clearing user')
+      setUser(null)
+      setLoading(false)
     }
+  }, [session, status])
 
-    checkSession()
-  }, [])
-
-  const signIn = async (name: string, netId: string, phoneNumber: string) => {
+  const signOut = async () => {
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ name, netId, phoneNumber }),
-      })
-
-      if (response.ok) {
-        setUser({ name, netId })
-        router.push('/courses')
-      } else {
-        throw new Error('Failed to sign in')
-      }
+      await router.push('/')
+      setUser(null)
     } catch (error) {
-      console.error('Sign in error:', error)
-      throw error
+      console.error('Error during sign out:', error)
     }
-  }
-
-  const signOut = () => {
-    setUser(null)
-    router.push('/auth')
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, loading, signOut }}>
       {children}
     </AuthContext.Provider>
   )
