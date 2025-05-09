@@ -4,47 +4,9 @@ import { PrismaAdapter } from "@auth/prisma-adapter"
 import { prisma } from "@/lib/prisma"
 import NextAuth from "next-auth"
 import GoogleProvider from "next-auth/providers/google"
+import { authOptions } from "@/lib/auth"
 loadEnvConfig(process.cwd())
 
-const handler = NextAuth({
-  adapter: PrismaAdapter(prisma),
-  providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID || "",
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
-    }),
-  ],
-  callbacks: {
-    signIn: async ({ user, account, profile }) => {
-      console.log('SignIn callback:', { user, account, profile })
-      // Check if the email ends with @illinois.edu
-      if (user.email?.endsWith('@illinois.edu')) {
-        return true
-      }
-      // Return false to display a default error message
-      return false
-    },
-    session: async ({ session, user }) => {
-      console.log('Session callback:', { session, user })
-      if (session?.user && typeof user.id === 'string') {
-        (session.user as any).id = user.id
-      }
-      return session
-    },
-    redirect: async ({ url, baseUrl }) => {
-      console.log('Redirect callback:', { url, baseUrl })
-      // Allows relative callback URLs
-      if (url.startsWith("/")) return `${baseUrl}${url}`
-      // Allows callback URLs on the same origin
-      else if (new URL(url).origin === baseUrl) return url
-      return baseUrl
-    },
-  },
-  pages: {
-    error: '/auth/error', // Custom error page
-    signIn: '/',
-  },
-  debug: true, // Enable debug messages
-})
+const handler = NextAuth(authOptions)
 
 export { handler as GET, handler as POST } 

@@ -20,7 +20,13 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getServerSession(authOptions);
+  let session;
+  try {
+    session = await getServerSession(authOptions);
+  } catch (error) {
+    console.error('Error getting session:', error);
+    session = null;
+  }
 
   return (
     <html lang="en">
